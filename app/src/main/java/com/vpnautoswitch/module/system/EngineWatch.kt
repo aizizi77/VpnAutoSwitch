@@ -77,7 +77,7 @@ internal fun Engine.watchdogTick() {
         // 只要这轮是模块拉起的、且没有「打开即关闭」的应用在压制，就直接关掉。
         if (autoSession && offAppForeground == null && (active || hasVpnTransport(ctx))) {
             log(ctx, LogCat.DIAG, "reconcile: no target alive but vpn still on -> schedule off")
-            scheduleOff(ctx, "no target alive")
+            scheduleOff(ctx, "no target alive", OFF_GRACE_MS)
         }
         watchdogRunning = false
         return
@@ -114,7 +114,7 @@ internal fun Engine.watchdogTick() {
     if (!EnginePolicy.shouldEnsureForProcessState(anyTargetAlive(ctx, processes()))) {
         log(ctx, LogCat.DIAG, "reconcile: target process gone -> off")
         aliveTargets.clear()
-        scheduleOff(ctx, "watchdog")
+        scheduleOff(ctx, "watchdog", OFF_GRACE_MS)
         watchdogRunning = false
     } else {
         // 只有「隧道确实没通、也没接管」才值得记一行：接管标记还没补上的那一两拍里，

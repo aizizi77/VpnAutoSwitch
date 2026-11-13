@@ -242,6 +242,9 @@ internal object Engine {
     internal const val OFF_FAST_MS = 500L
     internal const val OFF_SLOW_MS = 1_500L
 
+    /** 目标应用关掉后多等 3 分钟再断 VPN，免得来回切应用时反复握手耗电。 */
+    internal const val OFF_GRACE_MS = 180_000L
+
     /**
      * 「刚回到前台」的保护窗口：这段时间内收到该包的进程死亡，一律当成上一轮进程的
      * 残留回调，不关 VPN。

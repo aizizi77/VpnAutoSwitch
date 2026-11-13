@@ -200,7 +200,7 @@ internal fun Engine.handleProcessDied(pkg: String, detail: String? = null) {
     if (!EnginePolicy.shouldScheduleOffAfterDeath(true, aliveTargets.size)) return
     // 应用有时只是进程重启（被系统回收后立刻恢复），等一下再决定要不要关，
     // 否则会出现「刚连上就被关、关了又重连」的抖动。
-    scheduleOff(ctx, "$pkg died", OFF_SLOW_MS)
+    scheduleOff(ctx, "$pkg died", OFF_GRACE_MS)
 }
 
 /**
@@ -324,7 +324,7 @@ internal fun Engine.applyTaskRemoval(ctx: Context, cfg: Config, pkg: String) {
         log(ctx, LogCat.DIAG, "session kept: ${aliveTargets.size} target(s) still alive（全部退出才断）")
     }
     if (EnginePolicy.shouldScheduleOffAfterDeath(true, aliveTargets.size)) {
-        scheduleOff(ctx, "$pkg task removed")
+        scheduleOff(ctx, "$pkg task removed", OFF_GRACE_MS)
     }
 }
 

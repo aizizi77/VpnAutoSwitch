@@ -19,6 +19,14 @@ internal fun Engine.onScreenOff(ctx: Context) {
     if (automationPaused) return
     if (!hasVpnTransport(ctx)) return
 
+    // 若当前没目标存活、也没命中 wifiOn，VPN 只是在等 3 分钟等待期，锁屏就立刻断，不等了
+    if (judge(cfg, ctx).rule == "idle") {
+        log(ctx, LogCat.DIAG, "screen off idle -> disconnect now")
+        screenOffActive = true
+        turnOff("screen off idle")
+        return
+    }
+
     val minutes = cfg.screenOffMinutes.coerceIn(1, SCREEN_OFF_MAX_MINUTES)
     screenOffAt = SystemClock.elapsedRealtime()
     val token = ++screenOffToken
