@@ -105,6 +105,8 @@ internal fun Engine.pollClientTest(
             LogCat.START,
             "client test success: $pkg / $mode (${if (pinIt) "pinned" else "remembered only"})",
         )
+        // 测试已把 VPN 服务拉起来，顺手把 active 标志补回 1，免得标志与实际脱节
+        VpnSwitcher.adopt(ctx)
         return
     }
     if (attempt >= 30) {

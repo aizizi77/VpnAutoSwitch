@@ -335,6 +335,12 @@ internal fun Engine.scheduleOff(ctx: Context?, reason: String, debounceMs: Long 
         if (token != offToken) return@postDelayed
         val cfg = ConfigRepo.get(context)
         val wifiOnActive = cfg.enabled && isWifiOnActive(cfg)
+        // 排队时的 wifiOnActive 可能是切网瞬间还没更新的旧值，执行时按当前规则重算一次
+        // 若当前规则是 wifiOn，说明正连着要开 VPN 的 WiFi，取消这次关闭
+        if (judge(cfg, context).rule == "wifiOn") {
+            log(context, LogCat.DIAG, "delayed off cancelled: current rule is wifiOn")
+            return@postDelayed
+        }
         if (!EnginePolicy.shouldRunDelayedOff(
                 token,
                 offToken,
