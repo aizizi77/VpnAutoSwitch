@@ -1,0 +1,1109 @@
+diff --git a/CHANGELOG.md b/CHANGELOG.md
+index 0d90f54..ff256b1 100644
+--- a/CHANGELOG.md
++++ b/CHANGELOG.md
+@@ -3,6 +3,16 @@
+ 应用内「关于 → 更新日志」只显示最近 3 条，完整历史留在这里。
+ 每版控制在 3–5 行，只写改了什么；来龙去脉和排查过程记在 issue 与 commit 里。
+ 
++## 1.10.4-fork1 — 2026-11-18
++
++- fork 说明：基于上游 1.10.4，把 1.10.3-fork1 的 15 处修复全部搬过来，再针对两个新 Wi-Fi 开关补了一批修复（见下）
++- 修「回家切 duo-5G 关不掉」：目标应用还开在前台时关闭链不再被堵死，链失效也会收尾、不会卡住；关闭按实际在跑的客户端比对，不再按顶层包名
++- 新开关终于能在规则组里用：组里也能开「离开时断开」（guo-5g 那种配在组里的 Wi-Fi 也算数），离开判断用「离开的那条网络」的开关；SSID 读不到时先重试、不误判离开；暂停/锁屏期间的状态也同步，不会恢复后误断
++- 掉线不再当成手动关闭：目标应用还停在前台时掉线，不断 userOff、不停看门狗，下一拍自动重连；重新打开目标应用时掉线计数和启动冷却都从零算
++- 目标退出后多等 3 分钟再断（防进程回收重启反复断网），锁屏且已经是 idle 时直接断；看门狗连上后 30 秒一拍、心跳 60 秒，省电
++- 切换请求遇锁屏/暂停/切到关闭 Wi-Fi 时保留、2 秒后重算，不再丢弃；延迟启动先检查、通过后再停残留实例；客户端测试先接管再记方式，隧道已起时上限放宽到 30 秒
++- 已知修不了：VpnService 卡死仍无解，卡住只能 `am force-stop moe.nb4a`；从通知栏点回应用时手动关闭不会恢复，要再切一次应用
++
+ ## 1.10.4 — 2026-11-18
+ 
+ - 「指定 Wi-Fi 开 VPN」多了「离开时断开」开关：打开后语义从「在这条网络上总是开」变成「只在这些 Wi-Fi 下保持连接」，拔掉就断，不看目标应用还在不在
+diff --git a/README.md b/README.md
+index 3e0bbdc..a706b47 100644
+--- a/README.md
++++ b/README.md
+@@ -13,7 +13,7 @@
+   <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
+   <img src="https://img.shields.io/badge/Compose-1.12-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Compose" />
+   <img src="https://img.shields.io/badge/Miuix-0.9.4-FF6B00?style=flat-square" alt="Miuix" />
+-  <img src="https://img.shields.io/badge/Release-1.10.4-brightgreen?style=flat-square" alt="Release" />
++  <img src="https://img.shields.io/badge/Release-1.10.4-fork1-brightgreen?style=flat-square" alt="Release" />
+   <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="License" />
+ </p>
+ 
+@@ -46,7 +46,7 @@
+ 
+ ## 📖 使用文档
+ 
+-1. 打开 [Release](https://github.com/yaoiwi/VpnAutoSwitch/releases/latest)，下载 `VpnAutoSwitch-1.10.4.apk`（覆盖安装即可，配置会保留）。也可以在 **LSPosed 管理器 → 仓库** 里搜「VPN 自动开关」，装完之后能直接收到更新。
++1. 打开 [Release](https://github.com/yaoiwi/VpnAutoSwitch/releases/latest)，下载 `VpnAutoSwitch-1.10.4-fork1.apk`（覆盖安装即可，配置会保留）。也可以在 **LSPosed 管理器 → 仓库** 里搜「VPN 自动开关」，装完之后能直接收到更新。
+ 2. 打开 **LSPosed 管理器 → 模块**，启用本模块，**作用域只勾选「系统框架」**，然后重启手机。
+ 3. 打开 App：
+    - 「目标应用」选择需要自动连接 VPN 的应用；
+diff --git a/README_EN.md b/README_EN.md
+index fe85709..0004b4c 100644
+--- a/README_EN.md
++++ b/README_EN.md
+@@ -13,7 +13,7 @@
+   <img src="https://img.shields.io/badge/Kotlin-2.4-7F52FF?style=flat-square&logo=kotlin&logoColor=white" alt="Kotlin" />
+   <img src="https://img.shields.io/badge/Compose-1.12-4285F4?style=flat-square&logo=jetpackcompose&logoColor=white" alt="Compose" />
+   <img src="https://img.shields.io/badge/Miuix-0.9.4-FF6B00?style=flat-square" alt="Miuix" />
+-  <img src="https://img.shields.io/badge/Release-1.10.4-brightgreen?style=flat-square" alt="Release" />
++  <img src="https://img.shields.io/badge/Release-1.10.4-fork1-brightgreen?style=flat-square" alt="Release" />
+   <img src="https://img.shields.io/badge/License-Apache--2.0-blue?style=flat-square" alt="License" />
+ </p>
+ 
+@@ -46,7 +46,7 @@
+ 
+ ## 📖 Usage
+ 
+-1. Open [Releases](https://github.com/yaoiwi/VpnAutoSwitch/releases/latest) and download `VpnAutoSwitch-1.10.4.apk` (upgrading in place keeps your settings). You can also search for it in **LSPosed Manager → Repository**, which keeps it updated automatically.
++1. Open [Releases](https://github.com/yaoiwi/VpnAutoSwitch/releases/latest) and download `VpnAutoSwitch-1.10.4-fork1.apk` (upgrading in place keeps your settings). You can also search for it in **LSPosed Manager → Repository**, which keeps it updated automatically.
+ 2. Open **LSPosed Manager → Modules**, enable this module, **select only the "System Framework" scope**, then reboot.
+ 3. Open the app:
+    - Pick the apps that should turn the VPN on under **Target apps**;
+diff --git a/app/build.gradle.kts b/app/build.gradle.kts
+index a9c7747..d9bd72e 100644
+--- a/app/build.gradle.kts
++++ b/app/build.gradle.kts
+@@ -13,8 +13,8 @@ fun signingValue(env: String, prop: String): String? =
+         ?: signingProps.getProperty(prop)?.takeIf { it.isNotBlank() }
+ 
+ // 版本只在这里维护；CI 通过 :app:printVersionName 读取，避免解析脚本
+-val appVersionCode = 151
+-val appVersionName = "1.10.4"
++val appVersionCode = 152
++val appVersionName = "1.10.4-fork1"
+ 
+ val storePath = signingValue("KEYSTORE_FILE", "storeFile")
+ val storePwd = signingValue("KEYSTORE_PASSWORD", "storePassword")
+diff --git a/app/src/main/java/com/vpnautoswitch/module/Config.kt b/app/src/main/java/com/vpnautoswitch/module/Config.kt
+index 9c92207..9f58408 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/Config.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/Config.kt
+@@ -168,6 +168,7 @@ data class Config(
+             vpnPackage = rule.vpnPackage,
+             targets = rule.targets,
+             wifiOn = rule.wifiOn,
++            wifiOnOnly = rule.wifiOnOnly,
+         )
+     }
+ 
+@@ -183,8 +184,22 @@ data class Config(
+         vpnPackage = vpnPackage,
+         targets = targets,
+         wifiOn = wifiOn,
++        wifiOnOnly = wifiOnOnly,
+     )
+ 
++    /**
++     * 查某个 SSID 所在的「指定 Wi-Fi 开 VPN」名单开没开「离开时断开」。
++     * 组里的优先，顶层的兜底；哪个名单里都没有（或开关没开）就返回 false。
++     * 离开判断要用「离开的那条网络」的开关，现查这个函数，别用进入时记下的旧值——
++     * 用户可能在网内把开关改了。
++     */
++    fun wifiOnOnlyFor(ssid: String?): Boolean {
++        if (ssid == null) return false
++        val rule = rules.firstOrNull { it.enabled && ssid in it.wifiOn }
++        if (rule != null) return rule.wifiOnOnly
++        return ssid in wifiOn && wifiOnOnly
++    }
++
+     /** 配置里出现过的所有客户端包名：默认组 + 每个规则组，用来在重启后认出「现在开着谁」 */
+     fun knownClients(): Set<String> {
+         val out = LinkedHashSet<String>(rules.size + 1)
+@@ -266,8 +281,9 @@ data class Config(
+          *   降级成「只认默认组」，不会误把别的组的应用当成自己的目标。
+          * 5：多了 [Config.wifiOnOnly]。缺省 false，和 4 的行为一致。
+          * 6：多了 [Config.wifiOffResume]。缺省 false，和 5 的行为一致。
++         * 7：多了 [VpnRule.wifiOnOnly]。缺省 false，和 6 的行为一致。
+          */
+-        const val SCHEMA = 6
++        const val SCHEMA = 7
+ 
+         /** 界面风格：HyperOS / Miuix 那套 */
+         const val THEME_HYPER = "hyper"
+@@ -403,6 +419,7 @@ data class Config(
+                         vpnPackage = pkg,
+                         targets = readSet(o.optJSONArray("targets")),
+                         wifiOn = readSet(o.optJSONArray("wifiOn")),
++                        wifiOnOnly = o.optBoolean("wifiOnOnly", false),
+                     ),
+                 )
+             }
+@@ -456,6 +473,12 @@ data class VpnRule(
+     val vpnPackage: String = "",
+     val targets: Set<String> = emptySet(),
+     val wifiOn: Set<String> = emptySet(),
++    /**
++     * 这组「指定 Wi-Fi 开 VPN」的名单开没开「离开时断开」。
++     * 打开后只在这些 Wi-Fi 下保持连接，离开就断开；默认关，和顶层 [Config.wifiOnOnly] 一个意思，
++     * 只是按组生效——guo-5g 配在组里时，顶层的开关够不到它。
++     */
++    val wifiOnOnly: Boolean = false,
+ ) {
+ 
+     /** 界面上怎么称呼这一组：没起名就用客户端包名，总比「未命名」有信息量 */
+@@ -469,6 +492,7 @@ data class VpnRule(
+         o.put("vpn", vpnPackage)
+         o.put("targets", JSONArray(targets.toList()))
+         o.put("wifiOn", JSONArray(wifiOn.toList()))
++        o.put("wifiOnOnly", wifiOnOnly)
+         return o
+     }
+ 
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/Engine.kt b/app/src/main/java/com/vpnautoswitch/module/system/Engine.kt
+index cd0773a..c85f347 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/Engine.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/Engine.kt
+@@ -72,6 +72,9 @@ internal object Engine {
+ 
+     internal const val RECONCILE_INTERVAL_MS = 5_000L
+ 
++    /** 看门狗连上后的节拍：隧道稳住后 30 秒一拍，省电。网络变化有回调兜底，不靠这拍发现。 */
++    internal const val RECONCILE_CONNECTED_MS = 30_000L
++
+     /**
+      * 两组之间切换的最小间隔。
+      *
+@@ -116,8 +119,8 @@ internal object Engine {
+ 
+     internal var offGuardToken = 0
+ 
+-    /** 独立心跳：不依赖目标应用或看门狗，App 用它判断模块是否仍在运行 */
+-    internal const val HEARTBEAT_ACTIVE_MS = 30_000L
++    /** 独立心跳：不依赖目标应用或看门狗，App 用它判断模块是否仍在运行。活跃时 60 秒一拍——之前 30 秒太勤，白耗电；App 的判活阈值是 90 秒，60 秒仍在阈值内。 */
++    internal const val HEARTBEAT_ACTIVE_MS = 60_000L
+ 
+     /** 没有目标应用、也没有模块自己的会话时降频：少写一次就少唤醒一次设置观察者 */
+     internal const val HEARTBEAT_IDLE_MS = 60_000L
+@@ -251,6 +254,12 @@ internal object Engine {
+     internal const val OFF_FAST_MS = 500L
+     internal const val OFF_SLOW_MS = 1_500L
+ 
++    /**
++     * 目标应用退出后多等 3 分钟再断：系统可能只是把进程收走又重启，
++     * 立刻断会在重启时反复断网。3 分钟内目标回来就取消；锁屏且已经是 idle 时不等（见 EngineScreen）。
++     */
++    internal const val OFF_GRACE_MS = 180_000L
++
+     /**
+      * 「刚回到前台」的保护窗口：这段时间内收到该包的进程死亡，一律当成上一轮进程的
+      * 残留回调，不关 VPN。
+@@ -339,7 +348,7 @@ internal object Engine {
+      * （日志 21:34:25→21:34:33 三次 rejected 之后仍然停在原地）。
+      * 丢掉固定不会丢信息——完整链路第一次试的仍是最可能的那个方式。
+      */
+-    internal const val PIN_DEMOTE_ROUNDS = 1
++    internal const val PIN_DEMOTE_ROUNDS = 3
+ 
+     /**
+      * 强制停止后隧道可能还要一会儿才消失：分批复查，仍连着就再停一次。
+@@ -769,6 +778,11 @@ internal object Engine {
+     /** 当前连着的 Wi-Fi 名称（不带引号）；非 Wi-Fi 时为 null */
+     internal var currentSsid: String? = null
+ 
++    /** SSID 读不到时的重试计数（本轮最多 SSID_RETRY_MAX 次，读到一次就清零）。 */
++    internal var ssidRetryCount = 0
++    /** 是否已经有一条 SSID 重试挂在 handler 上（防重复挂）。 */
++    internal var ssidRetryPending = false
++
+     /** 上一次写进 Settings 的 SSID 状态（ok/off/masked），用来跳过重复写入 */
+     internal var ssidState: String? = null
+ 
+@@ -782,6 +796,13 @@ internal object Engine {
+      * 每拍都按当前值覆盖，模块重启后是 false，第一次网络切换不会被误判成「离开」。
+      */
+     internal var wasOnWifiRule = false
++    /**
++     * 上一次在「指定 Wi-Fi 开 VPN」网络上时，那条网络的 SSID。
++     * 离开判断要用「离开的那条网络」的开关，不能用当前网络的——离开时当前网络
++     * 已经不是那条了；而且开关可能在网内被改过，所以只记 SSID，离开时按当前
++     * 配置现查（见 [Config.wifiOnOnlyFor]），不用进入时记下的旧值。
++     */
++    internal var wasOnWifiRuleSsid: String? = null
+ 
+     /**
+      * 上一拍是否停在「指定 Wi-Fi 关 VPN」的网络上。
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineClientTest.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineClientTest.kt
+index 95da0f2..c501ca1 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineClientTest.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineClientTest.kt
+@@ -102,6 +102,9 @@ internal fun Engine.pollClientTest(
+                 // 1.9.21 把这种「成功」当成结论固定下来，引擎此后只发服务启动请求，
+                 // 把唯一能用的外部控制入口挡在外面（21:34:25 起连续三次 rejected）。
+                 // 所以：能查到外部控制入口的客户端，服务方式只记不固定。
++                // 先接管这条隧道再记方式：测试拉起的连接也要补上接管标记，
++                // 否则看门狗会一直判「没接管」，隧道会被当成用户手动连的。
++                VpnSwitcher.adopt(ctx)
+                 ExternalControl.remember(ctx, pkg, mode)
+                 val pinIt = mode == "activity" || !ExternalControl.hasExternalStart(ctx, pkg)
+                 if (pinIt) ExternalControl.pin(ctx, pkg, mode)
+@@ -132,9 +135,12 @@ internal fun Engine.pollClientTest(
+         )
+         clientTestUpAt = 0L
+     }
+-    if (attempt >= 40) {
++    // 隧道已经起来、只差稳住 6 秒时，上限放宽到 60 次（30 秒）：
++    // 有的客户端建隧道慢，20 秒不够就被判成「测不过」。
++    val limit = if (clientTestUpAt != 0L) 60 else 40
++    if (attempt >= limit) {
+         RuntimeDiagnostics.publishClientTest(
+-            ctx, pkg, mode, "failure", "20 秒内没有检测到能保持的 VPN 连接",
++            ctx, pkg, mode, "failure", "${limit / 2} 秒内没有检测到能保持的 VPN 连接",
+         )
+         log(ctx, LogCat.START, "client test timeout: $pkg / $mode")
+         return
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineClose.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineClose.kt
+index c1cb603..0cde57d 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineClose.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineClose.kt
+@@ -71,6 +71,8 @@ internal fun Engine.turnOff(reason: String) {
+     connectedAt = 0L
+     connectStartedAt = 0L
+     flapRetries = 0
++    // 新一轮关闭：掉线重试计数也清零，别让上一轮的掉线状态带进下一轮
++    clientDropRetries = 0
+     initWaitLogged = false
+     serviceModeHintLogged = false
+     lastStartAt = 0L
+@@ -164,10 +166,20 @@ internal fun Engine.turnOff(reason: String) {
+     publishRuntime(ctx)
+ }
+ 
+-/** 目标应用回到前台（压制解除）时不要动它；只是因为「打开即关闭」而断开时，继续关干净 */
++/**
++ * 判断关闭链现在能不能碰这条隧道。
++ *
++ * 只看「隧道是不是又被客户端接管回去了」：如果客户端（或用户）在关闭过程中
++ * 又把隧道拉起来，说明有人在用，别硬抢。
++ *
++ * 之前还要求「没有存活的目标应用」——回家时目标应用正开在前台，
++ * 这一条直接把整条关闭链堵死：verifyOff / verifyOffStep / awaitDown /
++ * finishVerifyOff 每次进来都默默 return，closeChainRunning 永远卡在 true，
++ * 守卫也被停掉，VPN 就一直关不掉。目标应用回到前台的压制由 ensureVpn 的
++ * 代次机制负责（offGeneration++ 直接作废旧链），不需要 canTouchVpn 再拦一次。
++ */
+ internal fun Engine.canTouchVpn(ctx: Context): Boolean =
+-    !VpnSwitcher.isActive(ctx.contentResolver) &&
+-        !(aliveTargets.isNotEmpty() && offAppForeground == null)
++    !VpnSwitcher.isActive(ctx.contentResolver)
+ 
+ /** 关闭链仍然有效：代次没变、VPN 包没换、当前仍允许操作 VPN。 */
+ internal fun Engine.closeChainValid(ctx: Context, expectedPackage: String, generation: Int): Boolean {
+@@ -176,7 +188,9 @@ internal fun Engine.closeChainValid(ctx: Context, expectedPackage: String, gener
+         generation = generation,
+         currentGeneration = offGeneration,
+         expectedVpnPackage = expectedPackage,
+-        currentVpnPackage = current.vpnPackage,
++        // 按实际在跑的客户端比对：规则组里的客户端可能和顶层包名不一样，
++        // 按顶层比对会直接把组客户端的关闭链判成失效。
++        currentVpnPackage = activePkg.ifEmpty { current.vpnPackage },
+         canTouchVpn = canTouchVpn(ctx),
+     )
+ }
+@@ -215,7 +229,13 @@ internal fun Engine.verifyOff(
+     generation: Int,
+     forceStopAllowed: Boolean = true,
+ ) {
+-    if (!closeChainValid(ctx, expectedPackage, generation)) return
++    if (!closeChainValid(ctx, expectedPackage, generation)) {
++        // 链失效也要收尾：直接 return 会让 closeChainRunning 永远卡在 true，
++        // 下一次关闭直接被「正在关」挡掉，VPN 就关不掉了。
++        // （代次已经换了新链时 endCloseChain 是空操作，新链不受影响。）
++        endCloseChain(ctx, generation)
++        return
++    }
+     if (!hasVpnTransport(ctx, fresh = true)) {
+         noteVpnDown(ctx)
+         log(ctx, LogCat.STOP, "verify: vpn is down")
+@@ -536,7 +556,10 @@ internal fun Engine.awaitDown(
+     val startedAt = SystemClock.elapsedRealtime()
+     val poll = object : Runnable {
+         override fun run() {
+-            if (!closeChainValid(ctx, expectedPackage, generation)) return
++            if (!closeChainValid(ctx, expectedPackage, generation)) {
++                endCloseChain(ctx, generation)
++                return
++            }
+             if (!hasVpnTransport(ctx, fresh = true)) {
+                 onDone(true)
+                 return
+@@ -558,7 +581,10 @@ internal fun Engine.verifyOffStep(
+     allowActivity: Boolean,
+     plan: List<EnginePolicy.StopStep>,
+ ) {
+-    if (!closeChainValid(ctx, expectedPackage, generation)) return
++    if (!closeChainValid(ctx, expectedPackage, generation)) {
++        endCloseChain(ctx, generation)
++        return
++    }
+     val cfg = ConfigRepo.get(ctx)
+     if (!hasVpnTransport(ctx, fresh = true)) {
+         noteVpnDown(ctx)
+@@ -641,7 +667,10 @@ internal fun Engine.finishVerifyOff(
+     attempt: Int,
+     plan: List<EnginePolicy.StopStep>,
+ ) {
+-    if (!closeChainValid(ctx, expectedPackage, generation)) return
++    if (!closeChainValid(ctx, expectedPackage, generation)) {
++        endCloseChain(ctx, generation)
++        return
++    }
+     val cfg = ConfigRepo.get(ctx)
+     if (!hasVpnTransport(ctx, fresh = true)) {
+         noteVpnDown(ctx)
+@@ -662,7 +691,10 @@ internal fun Engine.finishVerifyOff(
+         if (ExternalControl.stopVpnService(ctx, expectedPackage)) {
+             log(ctx, LogCat.STOP, "verify: 先停客户端 VpnService，等它自己断开")
+             handler.postDelayed({
+-                if (!closeChainValid(ctx, expectedPackage, generation)) return@postDelayed
++                if (!closeChainValid(ctx, expectedPackage, generation)) {
++                    endCloseChain(ctx, generation)
++                    return@postDelayed
++                }
+                 if (!hasVpnTransport(ctx, fresh = true)) {
+                     noteVpnDown(ctx)
+                     log(ctx, LogCat.STOP, "verify: vpn is down (VpnService stopped)")
+@@ -735,7 +767,10 @@ internal fun Engine.finishVerifyOff(
+     )
+ 
+     handler.postDelayed({
+-        if (!closeChainValid(ctx, expectedPackage, generation)) return@postDelayed
++        if (!closeChainValid(ctx, expectedPackage, generation)) {
++            endCloseChain(ctx, generation)
++            return@postDelayed
++        }
+         if (!hasVpnTransport(ctx, fresh = true)) {
+             // 这里以前只打了日志、没走 noteVpnDown，「VPN 已关闭」就永远弹不出来：
+             // 强停这条路是绝大多数关闭的终点（17:49:58、17:53:37 都是），
+@@ -784,7 +819,9 @@ internal fun Engine.hasVpnTransport(ctx: Context, fresh: Boolean = false): Boole
+             cm.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
+         }
+     } catch (t: Throwable) {
+-        true
++        // 读不到就按上一次的结果算，别硬写 true：硬写 true 会让「隧道其实已经没了」
++        // 被当成「还连着」，关闭链和看门狗都会误判。
++        transportValue
+     }
+     transportAt = now
+     transportValue = value
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineEvents.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineEvents.kt
+index b296725..638bdd5 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineEvents.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineEvents.kt
+@@ -116,7 +116,14 @@ internal fun Engine.handleForeground(pkg: String) {
+         log(ctx, LogCat.DIAG, "$pkg reopened -> auto enable resumed")
+     }
+     // 是「重新打开」就当作一次全新的连接请求，别被上一轮的掉线状态挡住
+-    if (freshOpen) wasConnected = false
++    if (freshOpen) {
++        wasConnected = false
++        // 掉线重试计数、外部启动预算、启动冷却都按新一轮从零算：
++        // 否则「刚打开那一下什么都不做，白等一分钟」（外部启动预算耗光 + 60 秒冷却）。
++        clientDropRetries = 0
++        externalAttempts = 0
++        lastApplyAt = 0L
++    }
+ 
+     logForeground(ctx, pkg, freshOpen)
+ 
+@@ -231,9 +238,9 @@ internal fun Engine.handleProcessDied(pkg: String, detail: String? = null) {
+         log(ctx, LogCat.DIAG, "session kept: ${aliveTargets.size} target(s) still alive（全部退出才断）")
+     }
+     if (!EnginePolicy.shouldScheduleOffAfterDeath(true, aliveTargets.size)) return
+-    // 应用有时只是进程重启（被系统回收后立刻恢复），等一下再决定要不要关，
+-    // 否则会出现「刚连上就被关、关了又重连」的抖动。
+-    scheduleOff(ctx, "$pkg died", OFF_SLOW_MS)
++    // 应用有时只是进程重启（被系统回收后立刻恢复），多等 3 分钟再决定要不要关，
++    // 否则会出现「刚连上就被关、关了又重连」的抖动。3 分钟内目标回来就取消。
++    scheduleOff(ctx, "$pkg died", OFF_GRACE_MS)
+ }
+ 
+ /**
+@@ -371,7 +378,7 @@ internal fun Engine.applyTaskRemoval(ctx: Context, cfg: Config, pkg: String) {
+         log(ctx, LogCat.DIAG, "session kept: ${aliveTargets.size} target(s) still alive（全部退出才断）")
+     }
+     if (EnginePolicy.shouldScheduleOffAfterDeath(true, aliveTargets.size)) {
+-        scheduleOff(ctx, "$pkg task removed")
++        scheduleOff(ctx, "$pkg task removed", OFF_GRACE_MS)
+     }
+ }
+ 
+@@ -381,7 +388,12 @@ internal fun Engine.scheduleOff(ctx: Context?, reason: String, debounceMs: Long
+     handler.postDelayed({
+         if (token != offToken) return@postDelayed
+         val cfg = ConfigRepo.get(context)
+-        val wifiOnActive = cfg.enabled && isWifiOnActive(cfg)
++        // 组里的「指定 Wi-Fi 开 VPN」也要认：只看顶层 wifiOn 时，
++        // 组里配了 guo-5g 却会被当成「不在开启网络上」，延迟关闭照样执行。
++        val hit = cfg.hitGroup(ruleProbe())
++        val effective = if (hit == null) cfg else cfg.forClient(hit.rule.vpnPackage, hit.rule.id)
++        val wifiOnActive = cfg.enabled &&
++            (isWifiOnActive(effective) || currentRule(cfg).first == "wifiOn")
+         if (!EnginePolicy.shouldRunDelayedOff(
+                 token,
+                 offToken,
+@@ -408,26 +420,24 @@ internal fun Engine.scheduleDelayedServiceStart(ctx: Context, cfg: Config) {
+     // 「delayed service start cancelled」，21:33:35 就写下了
+     // `external mode 'service' works`——而那一秒隧道其实是「测试外部控制」拉起来的，
+     // 同一秒上一行刚写着 `client test success: ... / activity (pinned)`。
+-    // 只有本轮第一次启动才先停掉残留实例：这时客户端可能还挂着上一次的会话，
+-    // 停一下再起才能干净地建新隧道。重试时绝不能再停——第二次 stopService 会把
+-    // 第一次刚刚开始建立的隧道推倒，日志 17:52:53→17:53:10 的 17 秒就是这么来的
+-    // （三次「restart VPN service」，每次都先 stop 再 start）。
+-    if (externalAttempts <= 1) {
+-        ExternalControl.stopVpnService(ctx, scheduledPackage)
+-    }
+     val token = ++startToken
+     handler.postDelayed({
+         val current = ConfigRepo.get(ctx)
+-        val wifiOnActive = current.enabled && isWifiOnActive(current)
++        // 组里的「指定 Wi-Fi 开 VPN」也要认：只看顶层 wifiOn 时，
++        // 组里配了 guo-5g 却会被当成「不在开启网络上」，延迟启动直接取消。
++        val hit = current.hitGroup(ruleProbe())
++        val effective = if (hit == null) current else current.forClient(hit.rule.vpnPackage, hit.rule.id)
++        val wifiOnActive = current.enabled && isWifiOnActive(effective)
+         // 排队的这 250ms 里隧道可能已经通了（客户端自己恢复连接、或上一次启动终于生效）。
+         // 这时再发一次启动，v2rayNG 会把刚建好的核心推倒重建，表现就是「连上五秒又掉」。
+-        val tunnelUp = hasVpnTransport(ctx)
++        // 隧道状态必须绕开 400ms 缓存读 fresh 的：排队那一下的采样可能还停在「没通」。
++        val tunnelUp = hasVpnTransport(ctx, fresh = true)
+         val allowed = EnginePolicy.shouldRunDelayedStart(
+             token = token,
+             currentToken = startToken,
+             scheduledVpnPackage = scheduledPackage,
+             enabled = current.enabled,
+-            currentVpnPackage = current.vpnPackage,
++            currentVpnPackage = effective.vpnPackage,
+             offAppForeground = offAppForeground != null,
+             userOff = userOff,
+             wifiSuppressed = wifiSuppressed,
+@@ -453,9 +463,30 @@ internal fun Engine.scheduleDelayedServiceStart(ctx: Context, cfg: Config) {
+             )
+             return@postDelayed
+         }
+-        markPendingExternalMode("service")
+-        ExternalControl.startVpnService(ctx, scheduledPackage)
+-        // 原来等 600ms 是为了让 stopService 先落地；250ms 足够，用户感知上是半秒差距
++        // 通过检查后再停残留实例：之前是先停后查，查不过时隧道已经被停掉、无人重拉。
++        // 只有本轮第一次启动才先停掉残留实例：这时客户端可能还挂着上一次的会话，
++        // 停一下再起才能干净地建新隧道。重试时绝不能再停——第二次 stopService 会把
++        // 第一次刚刚开始建立的隧道推倒，日志 17:52:53→17:53:10 的 17 秒就是这么来的
++        // （三次「restart VPN service」，每次都先 stop 再 start）。
++        if (externalAttempts <= 1) {
++            ExternalControl.stopVpnService(ctx, scheduledPackage)
++        }
++        // 停完等 250ms 再起，让 stop 落地；发之前再确认一次状态没变、隧道没通。
++        // 原来等 600ms 是为了让 stopService 先落地；250ms 足够，用户感知上是半秒差距。
++        handler.postDelayed({
++            if (token != startToken) {
++                markPendingExternalMode(null)
++                log(ctx, "delayed service start cancelled (state changed before send)")
++                return@postDelayed
++            }
++            if (hasVpnTransport(ctx, fresh = true)) {
++                markPendingExternalMode(null)
++                log(ctx, "delayed service start skipped: tunnel is already up")
++                return@postDelayed
++            }
++            markPendingExternalMode("service")
++            ExternalControl.startVpnService(ctx, scheduledPackage)
++        }, 250L)
+     }, 250L)
+ }
+ 
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineNetwork.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineNetwork.kt
+index 3ad5d0d..dd456c3 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineNetwork.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineNetwork.kt
+@@ -39,11 +39,15 @@ internal fun Engine.registerNetworkCallback(ctx: Context) {
+             lastTransport = transport
+             val beforeSsid = currentSsid
+             refreshSsid(ctx, transport == 1)
+-            if (changed || beforeSsid != currentSsid) {
++            // 只有传输类型或 SSID 真的变了才走完整流程：信号强弱也会走这个回调，
++            // 每次都全量重算（开关 VPN、切组）等于拿信号抖动当网络切换。
++            // 快照照常发，UI 不受影响。
++            val netChanged = changed || beforeSsid != currentSsid
++            if (netChanged) {
+                 log(ctx, LogCat.NET, "network -> ${transportLabel()} ssid=${ssidForLog(ctx, currentSsid)}")
+             }
+             handler.post {
+-                handleNetworkChanged()
++                if (netChanged) handleNetworkChanged()
+                 publishRuntime(ctx)
+             }
+         }
+@@ -132,6 +136,10 @@ internal fun Engine.probeNetwork(ctx: Context): Boolean {
+ 
+ private const val PROBE_MIN_INTERVAL_MS = 500L
+ 
++/** SSID 读不到时最多重试 3 次，每次间隔 1.5 秒：刚切完网那一下 SSID 经常是空的。 */
++internal const val SSID_RETRY_MAX = 3
++internal const val SSID_RETRY_DELAY_MS = 1_500L
++
+ internal fun Engine.transportLabel(): String = when (lastTransport) {
+     1 -> "wifi"
+     2 -> "mobile"
+@@ -194,6 +202,22 @@ internal fun Engine.refreshSsid(ctx: Context, isWifi: Boolean): String? {
+     val changed = clean != currentSsid || state != ssidState
+     currentSsid = clean
+     ssidState = state
++    // SSID 读到了：重试计数清零；读不到（Wi-Fi 但被遮住）就 1.5 秒后重试，
++    // 最多 3 次：刚切完网那一下 SSID 经常是空的，直接当成「不在 Wi-Fi 上」
++    // 会把「还在 guo-5g 上」误判成「离开了」。
++    if (clean != null) {
++        ssidRetryCount = 0
++    } else if (isWifi && ssidRetryCount < SSID_RETRY_MAX && !ssidRetryPending) {
++        ssidRetryPending = true
++        handler.postDelayed({
++            ssidRetryPending = false
++            ssidRetryCount++
++            if (probeNetwork(ctx)) {
++                handleNetworkChanged()
++                publishRuntime(ctx)
++            }
++        }, SSID_RETRY_DELAY_MS)
++    }
+     // 默认网络回调在信号强弱变化时也会触发，值没变就不必再写一遍 Settings：
+     // 每次写入都会唤醒所有观察者，锁屏待机时这是实打实的耗电
+     if (!changed) return clean
+@@ -251,6 +275,29 @@ private fun Engine.readSsid(ctx: Context): String? {
+     }
+ }
+ 
++/**
++ * 同步「在不在 Wi-Fi 规则网络上」的状态（wasOnWifiRule / wasOnWifiRuleSsid / wasOnWifiOffRule）。
++ *
++ * 暂停/锁屏等提前返回的分支也要调：状态是按「上一拍」记的，暂停期间网络变了、
++ * 恢复后下一拍会拿着旧状态判「刚刚离开」，上来就断 VPN。
++ * SSID 读不到时不知道人在哪，别动状态（见 B3）。
++ */
++internal fun Engine.syncWifiRuleStates(cfg: Config) {
++    if (lastTransport == 0) return
++    if (lastTransport != 1) {
++        wasOnWifiRule = false
++        wasOnWifiRuleSsid = null
++        wasOnWifiOffRule = false
++        return
++    }
++    val ssid = currentSsid ?: return
++    val group = cfg.hitGroup(ruleProbe())
++    val effective = if (group == null) cfg else cfg.forClient(group.rule.vpnPackage, group.rule.id)
++    wasOnWifiRule = ssid in effective.wifiOn || ssid in cfg.wifiOn
++    wasOnWifiRuleSsid = if (wasOnWifiRule) ssid else null
++    wasOnWifiOffRule = ssid in cfg.wifiOff
++}
++
+ internal fun Engine.handleNetworkChanged() {
+     val ctx = context() ?: return
+     // 兜底：回调可能没来（或被 ROM 吞掉），lastTransport 会停在旧值上——开机时是 0，
+@@ -263,7 +310,12 @@ internal fun Engine.handleNetworkChanged() {
+         return
+     }
+     if (!cfg.enabled) return
+-    if (automationPaused) return
++    if (automationPaused) {
++        // 暂停期间也要同步一次状态：否则恢复后下一拍会把暂停期间的离开
++        // 误判成「刚刚离开」，上来就断 VPN。
++        syncWifiRuleStates(cfg)
++        return
++    }
+ 
+     // 指定 Wi-Fi 规则优先于「网络类型总开关」
+     val hit = refreshWifiSuppression(ctx, cfg)
+@@ -278,33 +330,54 @@ internal fun Engine.handleNetworkChanged() {
+         stopWatchdog()
+         // 命中关闭规则时不在开启名单里，别把上一拍的「在开启网络上」带到下一次判断
+         wasOnWifiRule = false
++        wasOnWifiRuleSsid = null
+         wasOnWifiOffRule = true
+         return
+     }
++    // 先算命中组：离开判断要看「组里的 Wi-Fi 名单」，不能只看顶层。
++    // （guo-5g 配在规则组里时，顶层 wifiOn 是空的，按顶层判永远判不到离开。）
++    val group = cfg.hitGroup(ruleProbe())
++    val effective = if (group == null) cfg else cfg.forClient(group.rule.vpnPackage, group.rule.id)
++    // SSID 读不到时不知道人在哪：别动状态、别判离开，等 SSID 重试把名字读回来再说。
++    // 否则刚切网那一下 SSID 是空的，会把「还在 guo-5g 上」误判成「离开了」。
++    val wifiKnown = lastTransport != 1 || currentSsid != null
++    // 当前是不是在「指定 Wi-Fi 开 VPN」的网络上。
++    // 组里的优先（命中组的名单），顶层的兜底：顶层 wifiOn 里的网络上，即使命中组
++    // 是另一组，也不能误判成「离开了」。
++    val nowOnWifiRule: Boolean
++    if (lastTransport == 1 && currentSsid != null) {
++        val ssidNow = currentSsid!!
++        nowOnWifiRule = ssidNow in effective.wifiOn || ssidNow in cfg.wifiOn
++    } else {
++        nowOnWifiRule = false
++    }
+     // 上一拍在「指定 Wi-Fi 关 VPN」的网络上，这一拍离开了：记下来，等下面判完
+     // wifiOn 再决定要不要开（可能刚好切到了另一条「开 VPN」的网络，那条会自己开）
+-    val leavingWifiOff = EnginePolicy.shouldStartAfterLeavingWifiOff(
++    val leavingWifiOff = if (wifiKnown) EnginePolicy.shouldStartAfterLeavingWifiOff(
+         resumeOnLeave = cfg.wifiOffResume && cfg.wifiOff.isNotEmpty(),
+         wasOnWifi = wasOnWifiOffRule,
+         nowOnWifi = false,
+-        vpnOn = isVpnOn(ctx),
++        vpnOn = isVpnOn(ctx, fresh = true),
+         offAppOpen = offAppForeground != null,
+         userOff = userOff,
+-    )
+-    wasOnWifiOffRule = false
+-    // 离开「指定 Wi-Fi 开 VPN」的网络：网络回调比看门狗快，就地关掉，不用等那 5 秒
+-    val nowOnWifiRule = lastTransport == 1 &&
+-        currentSsid?.let { cfg.wifiOn.contains(it) } == true
+-    val leavingWifiOn = EnginePolicy.shouldDropAfterLeavingWifiOn(
+-        onlyOnWifi = cfg.wifiOnOnly && cfg.wifiOn.isNotEmpty(),
++    ) else false
++    if (wifiKnown) wasOnWifiOffRule = false
++    // 离开「指定 Wi-Fi 开 VPN」的网络：网络回调比看门狗快，就地关掉，不用等那 5 秒。
++    // 「离开时断开」用「离开的那条网络」的开关（按记下的 SSID 现查）：离开时当前网络
++    // 已经不是那条了，按当前网络的开关判永远是 false。
++    val leavingWifiOn = if (wifiKnown) EnginePolicy.shouldDropAfterLeavingWifiOn(
++        onlyOnWifi = cfg.wifiOnOnlyFor(wasOnWifiRuleSsid),
+         wasOnWifi = wasOnWifiRule,
+         nowOnWifi = nowOnWifiRule,
+-        vpnOn = isVpnOn(ctx),
++        vpnOn = isVpnOn(ctx, fresh = true),
+         moduleDriven = autoSession,
+         offAppOpen = offAppForeground != null,
+         userOff = userOff,
+-    )
+-    wasOnWifiRule = nowOnWifiRule
++    ) else false
++    if (wifiKnown) {
++        wasOnWifiRule = nowOnWifiRule
++        wasOnWifiRuleSsid = if (nowOnWifiRule) currentSsid else null
++    }
+     if (leavingWifiOn) {
+         log(ctx, LogCat.NET, "left wifi-on network -> turn off")
+         turnOff("left wifi-on network")
+@@ -313,8 +386,7 @@ internal fun Engine.handleNetworkChanged() {
+     val ssid = currentSsid
+     // 连上某个 Wi-Fi 可能是「切到另一组」的理由：旁路由组只配了 Wi-Fi，没配应用。
+     // cfg 换成命中组的等效配置，下面的 targets / wifiOn / 客户端都跟着变
+-    val group = cfg.hitGroup(ruleProbe())
+-    val effective = if (group == null) cfg else cfg.forClient(group.rule.vpnPackage, group.rule.id)
++    // （group / effective 已在离开判断前算好，这里直接复用）
+     val targets = if (group == null) aliveTargets else group.matched.toSet()
+ 
+     if (!ssid.isNullOrEmpty() && effective.wifiOn.contains(ssid)) {
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineRule.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineRule.kt
+index 719f209..3f25ebd 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineRule.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineRule.kt
+@@ -84,7 +84,10 @@ internal fun Engine.ruleProbe(): RuleProbe = RuleProbe(
+ internal fun Engine.userOffBlocks(hit: GroupHit?): Boolean {
+     if (!userOff) return false
+     val blocked = userOffRule ?: return true
+-    return hit?.rule?.id == blocked
++    // 空串就是默认组：没有组命中时，当前就是默认组，应当压住。
++    // 之前 hit 为 null 时 hit?.rule?.id 是 null，null != ""，于是默认组的手动关闭
++    // 压不住——和 prewarm 里的判定（owner?.id.orEmpty()）不一致。
++    return (hit?.rule?.id.orEmpty()) == blocked
+ }
+ 
+ internal fun Engine.judge(cfg: Config, ctx: Context?): RuleVerdict {
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineScreen.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineScreen.kt
+index 9ac5716..f0a5b7c 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineScreen.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineScreen.kt
+@@ -19,6 +19,16 @@ internal fun Engine.onScreenOff(ctx: Context) {
+     if (automationPaused) return
+     if (!hasVpnTransport(ctx)) return
+ 
++    // 锁屏且已经是 idle（没有目标应用、也不在「指定 Wi-Fi 开 VPN」里）：
++    // 直接断，不等配置的分钟数——锁屏了，用户不会马上回来，
++    // 目标退出的 3 分钟宽限也不用等。
++    if (currentRule(cfg).first == "idle") {
++        log(ctx, LogCat.DIAG, "screen off and idle -> off now")
++        screenOffActive = true
++        turnOff("screen off (idle)")
++        return
++    }
++
+     val minutes = cfg.screenOffMinutes.coerceIn(1, SCREEN_OFF_MAX_MINUTES)
+     screenOffAt = SystemClock.elapsedRealtime()
+     val token = ++screenOffToken
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineStart.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineStart.kt
+index 7e6a008..2647c7c 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineStart.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineStart.kt
+@@ -44,9 +44,6 @@ internal fun Engine.ensureVpn(
+     // 「正在跑的客户端」正好相反，靠配置反推会关错人
+     activePkg = cfg.vpnPackage
+     activeRuleId = rule?.id.orEmpty()
+-    // 有开启意图就说明现在要用了：先撤掉强停后那段「不许客户端自启」的窗口，
+-    // 否则下面重新启动 VpnService 会被自己的闸门挡掉
+-    ClientStartGuard.release()
+     if (automationPaused) return
+     // 锁屏断开期间不自动重连，等用户解锁后由 onScreenUnlocked 恢复
+     if (screenOffActive) return
+@@ -276,6 +273,25 @@ internal fun Engine.ensureVpn(
+             return
+         }
+ 
++        // 掉线次数用完了，但目标应用还停在前台、网络也还允许：这不是用户手动关，
++        // 是掉线。不断 userOff、不停看门狗，下一拍自动重连；重试计数按新一轮从零算。
++        // （用户真要手动关，前台会是客户端或系统界面，不会停在目标应用——
++        //  那个情况上面 shouldRecoverAfterDrop 已经排除掉了。）
++        if (lastForeground in aliveTargets) {
++            clientDropRetries = 0
++            externalAttempts = 0
++            reapplyCount = 0
++            connectedNotified = false
++            connectStartedAt = 0L
++            val life = if (connectedFor == Long.MAX_VALUE) "" else " after ${connectedFor}ms"
++            log(
++                ctx,
++                "vpn dropped$life but the target is still in front " +
++                    "-> keep the watchdog and reconnect next tick (retries reset)",
++            )
++            return
++        }
++
+         externalAttempts = 0
+         reapplyCount = 0
+         connectedNotified = false
+@@ -320,6 +336,10 @@ internal fun Engine.ensureVpn(
+     }
+ 
+     // 从这里往下模块真的要动手了，记下这轮是模块拉起的
++    // 撤掉强停后那段「不许客户端自启」的窗口：之前放在函数开头，
++    // 暂停/锁屏/手动关闭时直接 return 的那次调用也会把窗口取消，客户端可能原地复活。
++    // 放到「真正决定启动」之后，前面那些提前返回就不会误撤闸门。
++    ClientStartGuard.release()
+     autoSession = true
+ 
+     val now = SystemClock.elapsedRealtime()
+@@ -327,7 +347,9 @@ internal fun Engine.ensureVpn(
+     // 否则「打开应用多久有网」会把这半秒的等待也算进去
+     if (connectStartedAt == 0L) {
+         connectStartedAt = now
+-        // 新的一轮连接：启动宽限和「已提示过等待」的节流都从这一刻重新算
++        // 新的一轮连接：启动宽限和「已提示过等待」的节流都从这一刻重新算，
++        // 掉线重试计数也按新一轮从零算
++        clientDropRetries = 0
+         initWaitLogged = false
+         serviceModeHintLogged = false
+         lastStartAt = 0L
+@@ -514,7 +536,9 @@ internal fun Engine.ensureVpn(
+             return
+         }
+         log(ctx, LogCat.START, "vpn is down while setting points to us -> reapply")
+-        VpnSwitcher.reapply(ctx, cfg.vpnPackage, cfg.lockdown)
++        VpnSwitcher.reapply(ctx, cfg.vpnPackage, cfg.lockdown) { runnable, delay ->
++            handler.postDelayed(runnable, delay)
++        }
+         lastApplyAt = now
+         reapplyCount++
+         noteFailure(ctx, cfg)
+@@ -594,7 +618,9 @@ internal fun Engine.tryExternalStart(ctx: Context, cfg: Config, now: Long): Bool
+     // 记错之后下一轮会去弹它的界面。
+     val mode = ExternalControl.startMode(ctx, cfg.vpnPackage)
+     if (mode == null) {
+-        externalAttempts = MAX_EXTERNAL_ATTEMPTS
++        // 探针没读到启动方式（客户端还没起来、探针还没跑完）不等于「这条路走不通」，
++        // 只记一次尝试，别一次就把 3 次预算耗光：耗光之后本轮再也不会试外部启动了。
++        externalAttempts++
+         return false
+     }
+     externalAttempts++
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineSwitch.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineSwitch.kt
+index f029076..6240a24 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineSwitch.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineSwitch.kt
+@@ -46,7 +46,14 @@ internal fun Engine.resolveActivePkg(ctx: Context, cfg: Config): String {
+     val on = VpnSwitcher.currentAlwaysOn(ctx) ?: return ""
+     if (on !in cfg.knownClients()) return ""
+     activePkg = on
+-    activeRuleId = cfg.ruleOfPackage(on)?.id.orEmpty()
++    // 按当前命中的组定组 id，别按包名猜：默认组和规则组共用同一客户端时，
++    // 按包名找永远拿到第一个组，之后关/开都会算错目标。
++    val hit = cfg.hitGroup(ruleProbe())
++    activeRuleId = when {
++        hit != null && hit.rule.vpnPackage == on -> hit.rule.id
++        hit == null -> ""
++        else -> cfg.ruleOfPackage(on)?.id.orEmpty()
++    }
+     log(ctx, LogCat.DIAG, "active client recovered from always_on: $on")
+     return on
+ }
+@@ -96,9 +103,9 @@ internal fun Engine.requestSwitch(ctx: Context, rule: VpnRule, now: Long): Switc
+  */
+ internal fun Engine.resumePendingSwitch(ctx: Context) {
+     val ruleId = pendingSwitchRuleId ?: return
+-    pendingSwitchRuleId = null
+     val now = SystemClock.elapsedRealtime()
+     if (now - pendingSwitchAt > PENDING_SWITCH_TTL_MS) {
++        pendingSwitchRuleId = null
+         log(ctx, LogCat.START, "switch dropped: 排队的请求已经过期")
+         return
+     }
+@@ -108,9 +115,23 @@ internal fun Engine.resumePendingSwitch(ctx: Context) {
+         cfg.defaultRule()
+     } else {
+         cfg.rules.firstOrNull { it.id == ruleId && it.enabled }
+-    } ?: return
+-    if (rule.vpnPackage.isEmpty()) return
+-    if (!cfg.enabled || automationPaused || screenOffActive || wifiSuppressed) return
++    }
++    if (rule == null) {
++        pendingSwitchRuleId = null
++        return
++    }
++    if (rule.vpnPackage.isEmpty()) {
++        pendingSwitchRuleId = null
++        return
++    }
++    // 锁屏和暂停都是暂态：保留请求，等恢复后重算，别丢弃。
++    // 2 秒后重试一次，30 秒 TTL 一到自动过期，不会无限挂着。
++    if (!cfg.enabled || automationPaused || screenOffActive || wifiSuppressed) {
++        log(ctx, LogCat.START, "switch to ${groupTag(rule)} waiting: 暂态未恢复，稍后重算")
++        handler.postDelayed({ resumePendingSwitch(ctx) }, 2_000L)
++        return
++    }
++    pendingSwitchRuleId = null
+     // 现场重新算一遍命中的是谁，而不是拼接「前台 / 存活目标 / SSID」三种条件：
+     // 判定顺序（组内 Wi-Fi 优先、前台压过往后台的进程）就在这里，重写一遍迟早会走岔。
+     // 命中组已经换人（或者回到没有组的界面）就说明用户不需要这次切换了。
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/EngineWatch.kt b/app/src/main/java/com/vpnautoswitch/module/system/EngineWatch.kt
+index 7467d6e..c7097e1 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/EngineWatch.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/EngineWatch.kt
+@@ -58,29 +58,35 @@ internal fun Engine.watchdogTick() {
+     }
+ 
+     if (automationPaused) {
++        // 暂停期间也要同步一次状态：否则恢复后下一拍会把暂停期间的离开
++        // 误判成「刚刚离开」，上来就断 VPN。
++        syncWifiRuleStates(raw)
+         watchdogRunning = false
+         return
+     }
+ 
+     // 锁屏断开后不再对账：目标进程还在，但用户就是希望它保持断开
+     if (screenOffActive) {
++        syncWifiRuleStates(raw)
+         watchdogRunning = false
+         return
+     }
+ 
+     // 「指定 Wi-Fi 关 VPN」离开后自动开：必须在 wifiSuppressed 那一级之前。
+     // 离开之后这个缓存字段还是上一拍的 true，直接 return 就永远轮不到开
++    // SSID 读不到时不知道人在哪：别动状态、别判离开，等 SSID 重试把名字读回来再说。
++    val wifiKnown = lastTransport != 1 || currentSsid != null
+     val nowOnWifiOff = lastTransport == 1 &&
+         currentSsid?.let { raw.wifiOff.contains(it) } == true
+-    val leavingWifiOff = EnginePolicy.shouldStartAfterLeavingWifiOff(
++    val leavingWifiOff = if (wifiKnown) EnginePolicy.shouldStartAfterLeavingWifiOff(
+         resumeOnLeave = raw.wifiOffResume && raw.wifiOff.isNotEmpty(),
+         wasOnWifi = wasOnWifiOffRule,
+         nowOnWifi = nowOnWifiOff,
+-        vpnOn = active,
++        vpnOn = isVpnOn(ctx, fresh = true),
+         offAppOpen = offAppForeground != null,
+         userOff = userOff,
+-    )
+-    wasOnWifiOffRule = nowOnWifiOff
++    ) else false
++    if (wifiKnown) wasOnWifiOffRule = nowOnWifiOff
+     if (leavingWifiOff) {
+         val group = raw.hitGroup(ruleProbe())
+         val effective = if (group == null) raw else raw.forClient(group.rule.vpnPackage, group.rule.id)
+@@ -122,13 +128,13 @@ internal fun Engine.watchdogTick() {
+             // 不能只 postDelayed——watchdogRunning 还是 false，下一次 startWatchdog 进来
+             // 会以为已经在跑，直接 return，看门狗就此断掉
+             watchdogRunning = true
+-            handler.postDelayed(watchdog, RECONCILE_INTERVAL_MS)
++            handler.postDelayed(watchdog, if (active) RECONCILE_CONNECTED_MS else RECONCILE_INTERVAL_MS)
+             return
+         }
+         // 隧道开着但认不出归谁：这一拍不动它，下一拍再看
+         SwitchDecision.UNKNOWN -> {
+             watchdogRunning = true
+-            handler.postDelayed(watchdog, RECONCILE_INTERVAL_MS)
++            handler.postDelayed(watchdog, if (active) RECONCILE_CONNECTED_MS else RECONCILE_INTERVAL_MS)
+             return
+         }
+         SwitchDecision.NONE -> Unit
+@@ -137,17 +143,31 @@ internal fun Engine.watchdogTick() {
+     // 「只在这些 Wi-Fi 下保持连接」（wifiOnOnly）：离开的那一刻断开。
+     // 必须放在 wifiOn 那一级之前——离开之后 isWifiOnActive 已经是假，再往下走
+     // 只会落到「没有目标进程」，目标应用还挂在后台的话就永远关不掉
+-    val onWifiRule = lastTransport == 1 && currentSsid?.let { raw.wifiOn.contains(it) } == true
+-    val leavingWifiOn = EnginePolicy.shouldDropAfterLeavingWifiOn(
+-        onlyOnWifi = raw.wifiOnOnly && raw.wifiOn.isNotEmpty(),
++    // 当前是不是在「指定 Wi-Fi 开 VPN」的网络上。
++    // 组里的优先（命中组的名单），顶层的兜底：顶层 wifiOn 里的网络上，即使命中组
++    // 是另一组，也不能误判成「离开了」。
++    val onWifiRule: Boolean
++    if (lastTransport == 1 && currentSsid != null) {
++        val ssidNow = currentSsid!!
++        onWifiRule = ssidNow in cfg.wifiOn || ssidNow in raw.wifiOn
++    } else {
++        onWifiRule = false
++    }
++    // 「离开时断开」用「离开的那条网络」的开关（按记下的 SSID 现查）：离开时当前网络
++    // 已经不是那条了，按当前网络的开关判永远是 false。
++    val leavingWifiOn = if (wifiKnown) EnginePolicy.shouldDropAfterLeavingWifiOn(
++        onlyOnWifi = raw.wifiOnOnlyFor(wasOnWifiRuleSsid),
+         wasOnWifi = wasOnWifiRule,
+         nowOnWifi = onWifiRule,
+-        vpnOn = active,
++        vpnOn = isVpnOn(ctx, fresh = true),
+         moduleDriven = autoSession,
+         offAppOpen = offAppForeground != null,
+         userOff = userOffBlocks(hit),
+-    )
+-    wasOnWifiRule = onWifiRule
++    ) else false
++    if (wifiKnown) {
++        wasOnWifiRule = onWifiRule
++        wasOnWifiRuleSsid = if (onWifiRule) currentSsid else null
++    }
+     if (leavingWifiOn) {
+         log(ctx, LogCat.STOP, "left wifi-on network -> turn off")
+         turnOff("left wifi-on network")
+@@ -164,9 +184,13 @@ internal fun Engine.watchdogTick() {
+             watchdogRunning = false
+             return
+         }
+-        // 已经连着就只是保持，不再往下走去关它
++        // 已经连着就只是保持，不再往下走去关它。
++        // 连上就清掉切换失败计数：之前这里不走 ensureVpn，switchTrouble 永远不清，
++        // Wi-Fi 抖三下就误判「连续三次没切完」停手两分钟。
++        // 连上后 30 秒一拍，省电；网络变化有回调兜底。
+         if (active || hasVpnTransport(ctx)) {
+-            handler.postDelayed(watchdog, RECONCILE_INTERVAL_MS)
++            switchTrouble = SwitchTrouble()
++            handler.postDelayed(watchdog, RECONCILE_CONNECTED_MS)
+             return
+         }
+         // 没连着时不硬顶用户：手动关掉后等下一个网络回调，免得每 5 秒又把 VPN 顶开
+@@ -184,7 +208,7 @@ internal fun Engine.watchdogTick() {
+                 connectingTicks = connectingTicks,
+                 maxFastTicks = RECONCILE_CONNECTING_TICKS,
+                 fastMs = RECONCILE_CONNECTING_MS,
+-                normalMs = RECONCILE_INTERVAL_MS,
++                normalMs = if (connected) RECONCILE_CONNECTED_MS else RECONCILE_INTERVAL_MS,
+             ),
+         )
+         return
+@@ -195,7 +219,7 @@ internal fun Engine.watchdogTick() {
+         // 只要这轮是模块拉起的、且没有「打开即关闭」的应用在压制，就直接关掉。
+         if (autoSession && offAppForeground == null && (active || hasVpnTransport(ctx))) {
+             log(ctx, LogCat.DIAG, "reconcile: no target alive but vpn still on -> schedule off")
+-            scheduleOff(ctx, "no target alive")
++            scheduleOff(ctx, "no target alive", OFF_GRACE_MS)
+         }
+         watchdogRunning = false
+         return
+@@ -229,7 +253,7 @@ internal fun Engine.watchdogTick() {
+     if (!EnginePolicy.shouldEnsureForProcessState(anyTargetAlive(ctx, processes(), targets))) {
+         log(ctx, LogCat.DIAG, "reconcile: target process gone -> off")
+         aliveTargets.clear()
+-        scheduleOff(ctx, "watchdog")
++        scheduleOff(ctx, "watchdog", OFF_GRACE_MS)
+         watchdogRunning = false
+     } else {
+         // 只有「隧道确实没通、也没接管」才值得记一行：接管标记还没补上的那一两拍里，
+@@ -248,7 +272,7 @@ internal fun Engine.watchdogTick() {
+                 connectingTicks = connectingTicks,
+                 maxFastTicks = RECONCILE_CONNECTING_TICKS,
+                 fastMs = RECONCILE_CONNECTING_MS,
+-                normalMs = RECONCILE_INTERVAL_MS,
++                normalMs = if (connected) RECONCILE_CONNECTED_MS else RECONCILE_INTERVAL_MS,
+             ),
+         )
+     }
+diff --git a/app/src/main/java/com/vpnautoswitch/module/system/VpnSwitcher.kt b/app/src/main/java/com/vpnautoswitch/module/system/VpnSwitcher.kt
+index c64f9cd..de2dc91 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/system/VpnSwitcher.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/system/VpnSwitcher.kt
+@@ -69,14 +69,25 @@ internal object VpnSwitcher {
+     /**
+      * 设置已经指向我们的 VPN、但实际没连上时（例如用户在 VPN 客户端里手动断开），
+      * 先清空再写回一次，让系统重新 bind 一次 VpnService。
++     *
++     * 清和写之间必须留 120ms，让系统有机会把旧的 unbind 走完，
++     * 否则写回会把还没开始的 unbind 取消掉。
++     * 但这 120ms 不能在调用线程上 sleep：这条路跑在模块主线程上，
++     * 120ms 会把看门狗/网络回调/前台事件全卡住。改成 schedule 传进来的
++     * postDelayed 分两步做，调用方立刻返回；写回 120ms 后才落地，
++     * 期间的重复调用由调用方的 reapply 冷却挡住。
+      */
+-    fun reapply(ctx: Context, vpnPackage: String, lockdown: Boolean): Boolean {
+-        val cr = ctx.contentResolver
++    fun reapply(
++        ctx: Context,
++        vpnPackage: String,
++        lockdown: Boolean,
++        schedule: (Runnable, Long) -> Unit,
++    ): Boolean {
+         return try {
+             clearAlwaysOn(ctx, "reapply")
+             // 只需让设置的 ContentObserver 收到一次变化，250ms 是白等
+-            Thread.sleep(120)
+-            applyAlwaysOn(ctx, vpnPackage, lockdown)
++            schedule(Runnable { applyAlwaysOn(ctx, vpnPackage, lockdown) }, 120L)
++            true
+         } catch (t: Throwable) {
+             ModuleLog.append(ctx, "reapply failed: $t")
+             false
+diff --git a/app/src/main/java/com/vpnautoswitch/module/ui/MainScreenAbout.kt b/app/src/main/java/com/vpnautoswitch/module/ui/MainScreenAbout.kt
+index 199c66b..e9bdf71 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/ui/MainScreenAbout.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/ui/MainScreenAbout.kt
+@@ -90,6 +90,7 @@ private const val REPO_URL = "https://github.com/yaoiwi/VpnAutoSwitch"
+ private const val DEV_URL = "https://github.com/yaoiwi"
+ 
+ private const val CHANGELOG_TIPS =
++    "1.10.4-fork1：基于上游 1.10.4 的 fork。修「回家切 duo-5G 关不掉」（目标应用还开在前台时关闭链不再被堵死）、新开关终于能在规则组里用（guo-5g 那种配在组里的 Wi-Fi 也算数）、掉线不再当成手动关闭（目标还开着就自动重连）、目标退出后多等 3 分钟再断、看门狗连上后 30 秒一拍。VpnService 卡死仍修不了，卡住只能强停客户端。\n" +
+     "1.10.4：两个 Wi-Fi 名单各多了一个开关。「指定 Wi-Fi 开 VPN」里打开「离开时断开」，语义变成只在这些 Wi-Fi 下保持连接，拔掉就断。「指定 Wi-Fi 关 VPN」里打开「离开后自动开」，离开这些 Wi-Fi 就把 VPN 开回来。两个都默认关，不动现有配置；你手动关掉的那次不会被自动顶回来。\n" +
+     "1.10.3：修「打开目标应用，VPN 连上闪一下就断」——划掉任务的回调来时先看进程是不是还在前台，被系统收走一条任务记录不再当成用户退出。客户端测试改成「连上后要稳住 6 秒」才算可用，不再把「能建隧道、两秒就自己退出」的客户端固定成服务方式。\n" +
+     "1.10.2：切组有提示了，先弹「正在切换到 X」、连上再报「已切换到 X」，中间那一两秒不再是黑箱。状态通知和诊断改用命中组的客户端，两个组各用一个客户端时通知栏不再一直显示默认组那个。隧道开着却认不出是哪个客户端时不再默默接管，日志里写清 always_on 指向谁。同一组连续三次没切完就停手两分钟，不会再每 30 秒断一次网。"
+diff --git a/app/src/main/java/com/vpnautoswitch/module/ui/RuleGroupScreen.kt b/app/src/main/java/com/vpnautoswitch/module/ui/RuleGroupScreen.kt
+index 07c30e4..b7c79d7 100644
+--- a/app/src/main/java/com/vpnautoswitch/module/ui/RuleGroupScreen.kt
++++ b/app/src/main/java/com/vpnautoswitch/module/ui/RuleGroupScreen.kt
+@@ -42,6 +42,7 @@ import top.yukonga.miuix.kmp.basic.Icon
+ import top.yukonga.miuix.kmp.basic.IconButton
+ import top.yukonga.miuix.kmp.basic.MiuixScrollBehavior
+ import top.yukonga.miuix.kmp.basic.Scaffold
++import top.yukonga.miuix.kmp.basic.Switch
+ import top.yukonga.miuix.kmp.basic.Text
+ import top.yukonga.miuix.kmp.basic.TextField
+ import top.yukonga.miuix.kmp.icon.MiuixIcons
+@@ -238,6 +239,28 @@ private fun RuleCard(
+                 value = if (rule.wifiOn.isEmpty()) "不限" else rule.wifiOn.joinToString("、"),
+                 onClick = onEditWifi,
+             )
++            // 组里配了「指定 Wi-Fi 开 VPN」时才有「离开时断开」：打开后只在这些 Wi-Fi 下
++            // 保持连接，离开就断开。和顶层设置里那个开关一个意思，只是按组生效。
++            if (rule.wifiOn.isNotEmpty()) {
++                Row(
++                    modifier = Modifier.fillMaxWidth(),
++                    horizontalArrangement = Arrangement.SpaceBetween,
++                    verticalAlignment = Alignment.CenterVertically,
++                ) {
++                    Column(modifier = Modifier.weight(1f)) {
++                        Text(text = "离开时断开", fontSize = 13.sp)
++                        Text(
++                            text = "只在这些 Wi-Fi 下保持连接，离开就断开",
++                            fontSize = 11.sp,
++                            color = colors.onSurfaceVariantSummary,
++                        )
++                    }
++                    Switch(
++                        checked = rule.wifiOnOnly,
++                        onCheckedChange = { state.updateRule(rule.id) { it.copy(wifiOnOnly = it) } },
++                    )
++                }
++            }
+             Spacer(modifier = Modifier.height(10.dp))
+             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                 AppButton(
