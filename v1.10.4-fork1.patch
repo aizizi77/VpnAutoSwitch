@@ -1100,7 +1100,7 @@ index 07c30e4..b7c79d7 100644
 +                    }
 +                    Switch(
 +                        checked = rule.wifiOnOnly,
-+                        onCheckedChange = { state.updateRule(rule.id) { it.copy(wifiOnOnly = it) } },
++                        onCheckedChange = { checked -> state.updateRule(rule.id) { it.copy(wifiOnOnly = checked) } },
 +                    )
 +                }
 +            }
